@@ -1,112 +1,121 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
+import {
+  PageHeader, Card, CardHeader, FormGrid, FormInput, FormSelect,
+  GreenButton, Table, Td,
+} from '../../components/UI';
+
+const DAYS = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+const DAY_SHORT = { MONDAY: 'Mon', TUESDAY: 'Tue', WEDNESDAY: 'Wed', THURSDAY: 'Thu', FRIDAY: 'Fri', SATURDAY: 'Sat' };
+const DAY_COLORS = ['#e8f0fe', '#e6f6ef', '#fff0f1', '#fef3c7', '#f0ebff', '#fce7f3'];
+const DAY_TEXT = ['#1b3f7a', '#2d9e6b', '#e63946', '#d97706', '#8b5cf6', '#db2777'];
 
 const Timetable = () => {
   const [batches, setBatches] = useState([]);
   const [selectedBatch, setSelectedBatch] = useState('');
   const [timetable, setTimetable] = useState([]);
-  const [form, setForm] = useState({
-    day: '',
-    subject: '',
-    startTime: '',
-    endTime: '',
-    teacherId: '',
-  });
+  const [form, setForm] = useState({ day: '', subject: '', startTime: '', endTime: '' });
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const fetchBatches = async () => {
-      const res = await api.get('/teachers/me/batches');
-      setBatches(res.data);
-    };
-    fetchBatches();
+    api.get('/teachers/me/batches').then((res) => setBatches(res.data)).catch(() => {});
   }, []);
 
   useEffect(() => {
     if (selectedBatch) {
-      const fetchTimetable = async () => {
-        const res = await api.get(`/timetable/batch/${selectedBatch}`);
-        setTimetable(res.data);
-      };
-      fetchTimetable();
+      api.get(`/timetable/batch/${selectedBatch}`).then((res) => setTimetable(res.data)).catch(() => {});
     }
   }, [selectedBatch]);
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
       await api.post('/timetable', { ...form, batchId: selectedBatch });
-      setForm({ day: '', subject: '', startTime: '', endTime: '', teacherId: '' });
+      setForm({ day: '', subject: '', startTime: '', endTime: '' });
       const res = await api.get(`/timetable/batch/${selectedBatch}`);
       setTimetable(res.data);
-    } catch (err) {
-      console.error('Failed to add timetable entry', err);
-    }
+    } catch {} finally { setLoading(false); }
   };
 
-  const days = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+  const batchName = batches.find((b) => b.id === selectedBatch)?.name;
+
+  // Group by day
+  const grouped = DAYS.reduce((acc, d) => {
+    acc[d] = timetable.filter((e) => e.day === d);
+    return acc;
+  }, {});
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-4">Timetable</h1>
-      <div className="bg-white p-6 rounded shadow mb-6">
-        <div className="mb-4">
-          <label className="block text-gray-700 mb-2">Select Batch</label>
-          <select
-            value={selectedBatch}
-            onChange={(e) => setSelectedBatch(e.target.value)}
-            className="border p-2 rounded w-full md:w-1/2"
-          >
-            <option value="">-- Choose Batch --</option>
-            {batches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-          </select>
-        </div>
+    <div className="space-y-5">
+      <PageHeader title="Timetable" subtitle="Manage class schedules for your batches" />
 
-        {selectedBatch && (
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-            <select name="day" value={form.day} onChange={handleChange} className="border p-2 rounded" required>
-              <option value="">Select Day</option>
-              {days.map(d => <option key={d} value={d}>{d}</option>)}
-            </select>
-            <input type="text" name="subject" placeholder="Subject" value={form.subject} onChange={handleChange} className="border p-2 rounded" required />
-            <input type="time" name="startTime" value={form.startTime} onChange={handleChange} className="border p-2 rounded" required />
-            <input type="time" name="endTime" value={form.endTime} onChange={handleChange} className="border p-2 rounded" required />
-            <div className="md:col-span-3">
-              <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
-                Add Entry
-              </button>
-            </div>
-          </form>
-        )}
-      </div>
+      <Card>
+        <CardHeader title="Select Batch" />
+        <div className="p-5 max-w-sm">
+          <FormSelect value={selectedBatch} onChange={(e) => setSelectedBatch(e.target.value)}>
+            <option value="">— Choose a batch —</option>
+            {batches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+          </FormSelect>
+        </div>
+      </Card>
 
       {selectedBatch && (
-        <div className="bg-white rounded shadow overflow-x-auto">
-          <h2 className="text-lg font-semibold p-4 border-b">Timetable for {batches.find(b => b.id === selectedBatch)?.name}</h2>
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Day</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Time</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End Time</th>
-              </tr>
-            </thead>
-            <tbody>
-              {timetable.map(entry => (
-                <tr key={entry.id}>
-                  <td className="px-6 py-4">{entry.day}</td>
-                  <td className="px-6 py-4">{entry.subject}</td>
-                  <td className="px-6 py-4">{entry.startTime}</td>
-                  <td className="px-6 py-4">{entry.endTime}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <Card>
+            <CardHeader title={`Add Period — ${batchName}`} />
+            <div className="p-5">
+              <form onSubmit={handleSubmit}>
+                <FormGrid cols={2}>
+                  <FormSelect label="Day" name="day" value={form.day} onChange={handleChange} required>
+                    <option value="">Select day</option>
+                    {DAYS.map((d) => <option key={d} value={d}>{d}</option>)}
+                  </FormSelect>
+                  <FormInput label="Subject" type="text" name="subject" placeholder="e.g. Mathematics" value={form.subject} onChange={handleChange} required />
+                  <FormInput label="Start Time" type="time" name="startTime" value={form.startTime} onChange={handleChange} required />
+                  <FormInput label="End Time" type="time" name="endTime" value={form.endTime} onChange={handleChange} required />
+                </FormGrid>
+                <div className="mt-5">
+                  <GreenButton type="submit" loading={loading}>📅 Add to Timetable</GreenButton>
+                </div>
+              </form>
+            </div>
+          </Card>
+
+          {/* Weekly view */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {DAYS.map((day, idx) => (
+              <Card key={day}>
+                <div className="px-4 py-3 rounded-t-2xl flex items-center gap-2"
+                  style={{ background: DAY_COLORS[idx], borderBottom: `2px solid ${DAY_COLORS[idx]}` }}>
+                  <span className="font-bold text-sm" style={{ color: DAY_TEXT[idx] }}>{day}</span>
+                  <span className="ml-auto text-xs font-semibold rounded-full px-2 py-0.5"
+                    style={{ background: DAY_TEXT[idx], color: '#fff' }}>
+                    {grouped[day].length}
+                  </span>
+                </div>
+                <div className="p-3 space-y-2">
+                  {grouped[day].length > 0 ? grouped[day].map((entry) => (
+                    <div key={entry.id} className="flex items-center gap-3 p-2.5 rounded-xl"
+                      style={{ background: '#f8faff' }}>
+                      <div className="flex-shrink-0 text-xs font-semibold text-gray-500 text-center w-14">
+                        <div>{entry.startTime}</div>
+                        <div className="text-gray-300">—</div>
+                        <div>{entry.endTime}</div>
+                      </div>
+                      <div className="w-px h-8 rounded bg-gray-200 flex-shrink-0" />
+                      <span className="font-semibold text-sm" style={{ color: '#0f2447' }}>{entry.subject}</span>
+                    </div>
+                  )) : (
+                    <p className="text-center text-xs text-gray-400 py-4">No classes</p>
+                  )}
+                </div>
+              </Card>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

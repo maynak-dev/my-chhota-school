@@ -1,100 +1,121 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
+import {
+  PageHeader, Card, CardHeader, FormGrid, FormInput, FormSelect,
+  PrimaryButton, Table, Td, StatusBadge,
+} from '../../components/UI';
 
 const FeeManagement = () => {
   const [fees, setFees] = useState([]);
   const [students, setStudents] = useState([]);
-  const [form, setForm] = useState({
-    studentId: '',
-    totalFees: '',
-    dueDate: '',
-  });
+  const [form, setForm] = useState({ studentId: '', totalFees: '', dueDate: '' });
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
     try {
-      const [feesRes, studentsRes] = await Promise.all([
-        api.get('/fees'),
-        api.get('/students'),
-      ]);
-      setFees(feesRes.data);
-      setStudents(studentsRes.data);
-    } catch (err) {
-      console.error('Failed to load data', err);
-    }
+      const [feesRes, studentsRes] = await Promise.all([api.get('/fees'), api.get('/students')]);
+      setFees(feesRes.data); setStudents(studentsRes.data);
+    } catch {}
   };
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+    e.preventDefault(); setLoading(true);
     try {
       await api.post('/fees', form);
       setForm({ studentId: '', totalFees: '', dueDate: '' });
       fetchData();
-    } catch (err) {
-      console.error('Failed to create fee record', err);
-    } finally {
-      setLoading(false);
-    }
+    } catch {} finally { setLoading(false); }
   };
 
+  const totalCollected = fees.filter(f => f.status === 'PAID').reduce((sum, f) => sum + (f.paidAmount || 0), 0);
+  const totalDue = fees.filter(f => f.status !== 'PAID').reduce((sum, f) => sum + (f.totalFees - (f.paidAmount || 0)), 0);
+
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-4">Fee Management</h1>
-      <div className="bg-white p-6 rounded shadow mb-6">
-        <h2 className="text-lg font-semibold mb-4">Create Fee Record</h2>
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <select name="studentId" value={form.studentId} onChange={handleChange} className="border p-2 rounded" required>
-            <option value="">Select Student</option>
-            {students.map(s => <option key={s.id} value={s.id}>{s.user.name} ({s.rollNumber})</option>)}
-          </select>
-          <input type="number" name="totalFees" placeholder="Total Fees" value={form.totalFees} onChange={handleChange} className="border p-2 rounded" required />
-          <input type="date" name="dueDate" value={form.dueDate} onChange={handleChange} className="border p-2 rounded" required />
-          <div className="md:col-span-3">
-            <button type="submit" disabled={loading} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-              {loading ? 'Creating...' : 'Create Fee Record'}
-            </button>
+    <div className="space-y-5">
+      <PageHeader title="Fee Management" subtitle="Track and manage student fee records" />
+
+      {/* Summary cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {[
+          { label: 'Total Records', value: fees.length, icon: '📋', color: '#1b3f7a', bg: '#e8f0fe' },
+          { label: 'Total Collected', value: `₹${totalCollected.toLocaleString()}`, icon: '✅', color: '#2d9e6b', bg: '#e6f6ef' },
+          { label: 'Total Pending', value: `₹${totalDue.toLocaleString()}`, icon: '⏳', color: '#e63946', bg: '#fff0f1' },
+        ].map((s) => (
+          <div key={s.label} className="bg-white rounded-2xl p-4 flex items-center gap-4"
+            style={{ boxShadow: '0 2px 12px rgba(27,63,122,0.07)' }}>
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center text-xl flex-shrink-0" style={{ background: s.bg }}>{s.icon}</div>
+            <div>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{s.label}</p>
+              <p className="text-xl font-bold" style={{ fontFamily: 'Baloo 2, cursive', color: s.color }}>{s.value}</p>
+            </div>
           </div>
-        </form>
+        ))}
       </div>
 
-      <div className="bg-white rounded shadow overflow-x-auto">
-        <h2 className="text-lg font-semibold p-4 border-b">Fee Records</h2>
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Fees</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paid</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {fees.map(f => (
-              <tr key={f.id}>
-                <td className="px-6 py-4">{f.student?.user?.name}</td>
-                <td className="px-6 py-4">₹{f.totalFees}</td>
-                <td className="px-6 py-4">₹{f.paidAmount}</td>
-                <td className="px-6 py-4">{new Date(f.dueDate).toLocaleDateString()}</td>
-                <td className="px-6 py-4">
-                  <span className={`px-2 py-1 rounded text-xs ${f.status === 'PAID' ? 'bg-green-100 text-green-800' : f.status === 'OVERDUE' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                    {f.status}
-                  </span>
-                </td>
+      <Card>
+        <CardHeader title="Create Fee Record" />
+        <div className="p-5">
+          <form onSubmit={handleSubmit}>
+            <FormGrid cols={3}>
+              <FormSelect label="Student" name="studentId" value={form.studentId} onChange={handleChange} required>
+                <option value="">Select student</option>
+                {students.map((s) => <option key={s.id} value={s.id}>{s.user.name} ({s.rollNumber})</option>)}
+              </FormSelect>
+              <FormInput label="Total Fees (₹)" type="number" name="totalFees" placeholder="0.00" value={form.totalFees} onChange={handleChange} required />
+              <FormInput label="Due Date" type="date" name="dueDate" value={form.dueDate} onChange={handleChange} required />
+            </FormGrid>
+            <div className="mt-5">
+              <PrimaryButton type="submit" loading={loading}>💰 Create Fee Record</PrimaryButton>
+            </div>
+          </form>
+        </div>
+      </Card>
+
+      <Card>
+        <CardHeader title="Fee Records" />
+
+        {/* Desktop */}
+        <div className="hidden sm:block">
+          <Table headers={['Student', 'Total Fees', 'Paid', 'Balance', 'Due Date', 'Status']}>
+            {fees.map((f) => (
+              <tr key={f.id} className="hover:bg-blue-50 transition-colors">
+                <Td><span className="font-medium">{f.student?.user?.name}</span></Td>
+                <Td className="font-semibold">₹{f.totalFees?.toLocaleString()}</Td>
+                <Td className="text-green-600 font-semibold">₹{f.paidAmount?.toLocaleString()}</Td>
+                <Td className="text-red-500 font-semibold">₹{((f.totalFees || 0) - (f.paidAmount || 0)).toLocaleString()}</Td>
+                <Td>{new Date(f.dueDate).toLocaleDateString('en-IN')}</Td>
+                <Td><StatusBadge status={f.status} /></Td>
               </tr>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </Table>
+        </div>
+
+        {/* Mobile */}
+        <div className="sm:hidden divide-y" style={{ borderColor: '#f0f4fc' }}>
+          {fees.map((f) => (
+            <div key={f.id} className="px-5 py-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="font-semibold text-sm">{f.student?.user?.name}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Due: {new Date(f.dueDate).toLocaleDateString('en-IN')}</p>
+                  <p className="text-xs mt-1">
+                    <span className="text-green-600 font-semibold">Paid ₹{f.paidAmount?.toLocaleString()}</span>
+                    <span className="text-gray-400"> / </span>
+                    <span className="font-semibold">₹{f.totalFees?.toLocaleString()}</span>
+                  </p>
+                </div>
+                <StatusBadge status={f.status} />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {fees.length === 0 && <div className="py-12 text-center text-gray-400 text-sm">No fee records found.</div>}
+      </Card>
     </div>
   );
 };

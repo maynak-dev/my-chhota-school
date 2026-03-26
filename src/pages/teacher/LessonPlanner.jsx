@@ -1,74 +1,93 @@
 import { useState } from 'react';
+import {
+  PageHeader, Card, CardHeader, FormGrid, FormInput, FormTextarea,
+  PrimaryButton, Table, Td,
+} from '../../components/UI';
 
 const LessonPlanner = () => {
-  const [date, setDate] = useState('');
-  const [topic, setTopic] = useState('');
-  const [objectives, setObjectives] = useState('');
-  const [activities, setActivities] = useState('');
+  const [form, setForm] = useState({ date: '', topic: '', objectives: '', activities: '' });
   const [plans, setPlans] = useState([]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const newPlan = { date, topic, objectives, activities };
-    setPlans([...plans, newPlan]);
-    setDate('');
-    setTopic('');
-    setObjectives('');
-    setActivities('');
+    setPlans([{ ...form, id: Date.now() }, ...plans]);
+    setForm({ date: '', topic: '', objectives: '', activities: '' });
   };
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-4">Lesson Planner</h1>
-      <div className="bg-white p-6 rounded shadow mb-6">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-gray-700 mb-2">Date</label>
-            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="border p-2 rounded w-full" required />
-          </div>
-          <div>
-            <label className="block text-gray-700 mb-2">Topic</label>
-            <input type="text" value={topic} onChange={(e) => setTopic(e.target.value)} className="border p-2 rounded w-full" required />
-          </div>
-          <div>
-            <label className="block text-gray-700 mb-2">Learning Objectives</label>
-            <textarea value={objectives} onChange={(e) => setObjectives(e.target.value)} rows="3" className="border p-2 rounded w-full" />
-          </div>
-          <div>
-            <label className="block text-gray-700 mb-2">Activities</label>
-            <textarea value={activities} onChange={(e) => setActivities(e.target.value)} rows="3" className="border p-2 rounded w-full" />
-          </div>
-          <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Add Plan</button>
-        </form>
-      </div>
+    <div className="space-y-5">
+      <PageHeader title="Lesson Planner" subtitle="Plan and organize your daily lessons" />
 
-      <div className="bg-white rounded shadow overflow-x-auto">
-        <h2 className="text-lg font-semibold p-4 border-b">Lesson Plans</h2>
+      <Card>
+        <CardHeader title="Add New Lesson Plan" />
+        <div className="p-5">
+          <form onSubmit={handleSubmit}>
+            <FormGrid cols={2}>
+              <FormInput label="Date" type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required />
+              <FormInput label="Topic" type="text" placeholder="e.g. Photosynthesis" value={form.topic} onChange={(e) => setForm({ ...form, topic: e.target.value })} required />
+              <FormTextarea label="Learning Objectives" placeholder="What will students learn?" rows={3} value={form.objectives} onChange={(e) => setForm({ ...form, objectives: e.target.value })} />
+              <FormTextarea label="Activities" placeholder="Activities and teaching methods..." rows={3} value={form.activities} onChange={(e) => setForm({ ...form, activities: e.target.value })} />
+            </FormGrid>
+            <div className="mt-5">
+              <PrimaryButton type="submit">📖 Add Lesson Plan</PrimaryButton>
+            </div>
+          </form>
+        </div>
+      </Card>
+
+      <Card>
+        <CardHeader title={`Lesson Plans (${plans.length})`} />
+
         {plans.length === 0 ? (
-          <p className="p-4 text-gray-500">No lesson plans added yet.</p>
+          <div className="py-12 text-center">
+            <div className="text-4xl mb-3">📚</div>
+            <p className="text-gray-400 text-sm">No lesson plans added yet. Start planning your lessons!</p>
+          </div>
         ) : (
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Topic</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Objectives</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Activities</th>
-              </tr>
-            </thead>
-            <tbody>
-              {plans.map((plan, idx) => (
-                <tr key={idx}>
-                  <td className="px-6 py-4">{plan.date}</td>
-                  <td className="px-6 py-4">{plan.topic}</td>
-                  <td className="px-6 py-4">{plan.objectives}</td>
-                  <td className="px-6 py-4">{plan.activities}</td>
-                </tr>
+          <>
+            {/* Desktop */}
+            <div className="hidden sm:block">
+              <Table headers={['Date', 'Topic', 'Objectives', 'Activities']}>
+                {plans.map((plan) => (
+                  <tr key={plan.id} className="hover:bg-blue-50 transition-colors">
+                    <Td>
+                      <span className="font-semibold text-sm" style={{ color: '#1b3f7a' }}>
+                        {new Date(plan.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </span>
+                    </Td>
+                    <Td><span className="font-semibold">{plan.topic}</span></Td>
+                    <Td><span className="text-gray-600 text-sm line-clamp-2">{plan.objectives || '—'}</span></Td>
+                    <Td><span className="text-gray-600 text-sm line-clamp-2">{plan.activities || '—'}</span></Td>
+                  </tr>
+                ))}
+              </Table>
+            </div>
+
+            {/* Mobile */}
+            <div className="sm:hidden divide-y" style={{ borderColor: '#f0f4fc' }}>
+              {plans.map((plan) => (
+                <div key={plan.id} className="px-5 py-4">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-xs flex-shrink-0"
+                      style={{ background: '#1b3f7a' }}>
+                      {new Date(plan.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                    </div>
+                    <div>
+                      <p className="font-bold text-sm">{plan.topic}</p>
+                    </div>
+                  </div>
+                  {plan.objectives && (
+                    <p className="text-xs text-gray-600 mb-1"><span className="font-semibold">Objectives:</span> {plan.objectives}</p>
+                  )}
+                  {plan.activities && (
+                    <p className="text-xs text-gray-600"><span className="font-semibold">Activities:</span> {plan.activities}</p>
+                  )}
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </>
         )}
-      </div>
+      </Card>
     </div>
   );
 };
