@@ -171,7 +171,7 @@ const Sidebar = ({ role, mobileOpen, onClose }) => {
             <div className="text-white font-bold text-sm leading-tight" style={{ fontFamily: 'Baloo 2, cursive' }}>
               My Chhota School
             </div>
-            <div className="text-blue-200 text-xs opacity-70">ERP Portal</div>
+            <div className="text-blue-200 text-xs opacity-70">Learning Management System</div>
           </div>
           <button
             onClick={onClose}
