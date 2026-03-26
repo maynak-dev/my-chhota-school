@@ -149,7 +149,7 @@ const Dashboard = () => {
         <div className="text-3xl">🏫</div>
         <div>
           <p className="text-white font-bold text-base" style={{ fontFamily: 'Baloo 2, cursive' }}>
-            My Chhota School ERP
+            My Chhota School LMS
           </p>
           <p className="text-blue-200 text-sm">
             Manage your school efficiently. All data is secure and up to date.
