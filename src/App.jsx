@@ -16,6 +16,7 @@ import Reports from './pages/admin/Reports';
 // Teacher Pages
 import Attendance from './pages/teacher/Attendance';
 import Notes from './pages/teacher/Notes';
+import TeacherVideos from './pages/teacher/Videos';
 import Assignments from './pages/teacher/Assignments';
 import Timetable from './pages/teacher/Timetable';
 import LessonPlanner from './pages/teacher/LessonPlanner';
@@ -24,6 +25,7 @@ import StudentList from './pages/teacher/StudentList';
 // Student Pages
 import StudentVideos from './pages/student/Videos';
 import StudentNotes from './pages/student/Notes';
+import StudentAssignments from './pages/student/Assignments';
 import StudentAttendance from './pages/student/Attendance';
 import StudentFees from './pages/student/Fees';
 import StudentResults from './pages/student/Results';
@@ -55,6 +57,7 @@ function App() {
               {/* Teacher Routes */}
               <Route path="/teacher/attendance" element={<Attendance />} />
               <Route path="/teacher/notes" element={<Notes />} />
+              <Route path="/teacher/videos" element={<TeacherVideos />} />
               <Route path="/teacher/assignments" element={<Assignments />} />
               <Route path="/teacher/timetable" element={<Timetable />} />
               <Route path="/teacher/lesson-planner" element={<LessonPlanner />} />
@@ -63,6 +66,7 @@ function App() {
               {/* Student Routes */}
               <Route path="/student/videos" element={<StudentVideos />} />
               <Route path="/student/notes" element={<StudentNotes />} />
+              <Route path="/student/assignments" element={<StudentAssignments />} />
               <Route path="/student/attendance" element={<StudentAttendance />} />
               <Route path="/student/fees" element={<StudentFees />} />
               <Route path="/student/results" element={<StudentResults />} />

@@ -109,6 +109,7 @@ const Sidebar = ({ role, mobileOpen, onClose }) => {
   ];
   const teacherLinks = [
     { to: '/teacher/attendance', label: 'Attendance' },
+    { to: '/teacher/videos', label: 'Videos' },
     { to: '/teacher/notes', label: 'Notes' },
     { to: '/teacher/assignments', label: 'Assignments' },
     { to: '/teacher/timetable', label: 'Timetable' },
@@ -118,6 +119,7 @@ const Sidebar = ({ role, mobileOpen, onClose }) => {
   const studentLinks = [
     { to: '/student/videos', label: 'Videos' },
     { to: '/student/notes', label: 'Notes' },
+    { to: '/student/assignments', label: 'Assignments' },
     { to: '/student/attendance', label: 'Attendance' },
     { to: '/student/fees', label: 'Fees' },
     { to: '/student/results', label: 'Results' },
