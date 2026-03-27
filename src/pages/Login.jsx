@@ -31,7 +31,7 @@ const Login = () => {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center p-4"
+      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
       style={{
         background: 'linear-gradient(135deg, #0f2447 0%, #1b3f7a 50%, #2a5bae 100%)',
       }}
