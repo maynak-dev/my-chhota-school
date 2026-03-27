@@ -10,6 +10,7 @@ import Notifications from './pages/admin/Notifications';
 import Users from './pages/admin/Users';
 import Admissions from './pages/admin/Admissions';
 import Batches from './pages/admin/Batches';
+import Courses from './pages/admin/Courses';
 import FeeManagement from './pages/admin/FeeManagement';
 import Reports from './pages/admin/Reports';
 
@@ -49,6 +50,7 @@ function App() {
               {/* Admin Routes */}
               <Route path="/admin/users" element={<Users />} />
               <Route path="/admin/admissions" element={<Admissions />} />
+              <Route path="/admin/courses" element={<Courses />} />
               <Route path="/admin/batches" element={<Batches />} />
               <Route path="/admin/fees" element={<FeeManagement />} />
               <Route path="/admin/reports" element={<Reports />} />
