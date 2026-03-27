@@ -6,6 +6,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 
 // Admin Pages
+import Notifications from './pages/admin/Notifications';
 import Users from './pages/admin/Users';
 import Admissions from './pages/admin/Admissions';
 import Batches from './pages/admin/Batches';
@@ -49,6 +50,7 @@ function App() {
               <Route path="/admin/batches" element={<Batches />} />
               <Route path="/admin/fees" element={<FeeManagement />} />
               <Route path="/admin/reports" element={<Reports />} />
+              <Route path="/admin/notifications" element={<Notifications />} />
               
               {/* Teacher Routes */}
               <Route path="/teacher/attendance" element={<Attendance />} />
