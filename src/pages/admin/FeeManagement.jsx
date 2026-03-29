@@ -24,11 +24,14 @@ const FeeManagement = () => {
   const [editMsg, setEditMsg] = useState('');
   const [editIsError, setEditIsError] = useState(false);
 
-  // Action loading states for approve/reject
+  // Action loading for approve/reject
   const [actionLoading, setActionLoading] = useState(null);
 
-  // Confirmation modal state
-  const [confirmModal, setConfirmModal] = useState(null); // { action: 'approve' or 'reject', payment }
+  // Custom confirmation modal state
+  const [confirmModal, setConfirmModal] = useState(null); // { action, payment }
+
+  // Success/error toast state (optional but nice)
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -132,30 +135,34 @@ const FeeManagement = () => {
     }
   };
 
-  // Show custom confirmation modal instead of window.confirm
+  // Open custom confirmation modal (replaces window.confirm)
   const openConfirmModal = (action, payment) => {
     setConfirmModal({ action, payment });
   };
 
+  // Execute approve/reject after confirmation
   const handleConfirmAction = async () => {
     const { action, payment } = confirmModal;
-    const studentName = payment.fee?.student?.user?.name || 'student';
-    
     setActionLoading(payment.id);
-    setConfirmModal(null); // close modal
+    setConfirmModal(null); // close modal immediately
 
     try {
       if (action === 'approve') {
         await api.put(`/payments/${payment.id}`, { status: 'APPROVED' });
+        setToast({ type: 'success', message: `✅ Payment of ₹${payment.amount} approved!` });
       } else {
         await api.put(`/payments/${payment.id}`, { status: 'REJECTED' });
+        setToast({ type: 'success', message: `❌ Payment of ₹${payment.amount} rejected.` });
       }
+      // Refresh data
       await Promise.all([fetchData(), fetchPendingPayments()]);
     } catch (err) {
       console.error(`${action} failed:`, err);
-      alert(err.response?.data?.error || `Failed to ${action} payment`);
+      setToast({ type: 'error', message: err.response?.data?.error || `Failed to ${action} payment` });
     } finally {
       setActionLoading(null);
+      // Auto-hide toast after 3 seconds
+      setTimeout(() => setToast(null), 3000);
     }
   };
 
@@ -165,6 +172,15 @@ const FeeManagement = () => {
   return (
     <div className="space-y-5">
       <PageHeader title="Fee Management" subtitle="Track student fees and manage payment approvals" />
+
+      {/* Toast notification */}
+      {toast && (
+        <div className={`fixed top-5 right-5 z-50 px-4 py-3 rounded-xl shadow-lg text-sm font-medium transition-all ${
+          toast.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
+        }`}>
+          {toast.message}
+        </div>
+      )}
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
@@ -193,7 +209,6 @@ const FeeManagement = () => {
           <div className="py-8 text-center text-gray-400 text-sm">No pending payment requests.</div>
         ) : (
           <>
-            {/* Desktop Table */}
             <div className="hidden sm:block overflow-x-auto">
               <Table headers={['Student', 'Fee Type', 'Amount', 'Method', 'Transaction ID', 'Submitted On', 'Actions']}>
                 {pendingPayments.map(p => {
@@ -238,8 +253,6 @@ const FeeManagement = () => {
                 })}
               </Table>
             </div>
-
-            {/* Mobile Cards */}
             <div className="sm:hidden divide-y" style={{ borderColor: '#f0f4fc' }}>
               {pendingPayments.map(p => {
                 const studentName = p.fee?.student?.user?.name || 'Unknown';
@@ -411,7 +424,7 @@ const FeeManagement = () => {
         </div>
       )}
 
-      {/* ✅ Custom Confirmation Modal for Approve/Reject */}
+      {/* ✅ Custom Confirmation Modal (No native confirm!) */}
       {confirmModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-45 backdrop-blur-sm">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 border border-blue-50 transform transition-all">
