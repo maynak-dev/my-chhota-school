@@ -8,6 +8,7 @@ const FeeDetails = () => {
   const [children, setChildren] = useState([]);
   const [selectedChild, setSelectedChild] = useState(null);
   const [fees, setFees] = useState([]);
+  const [pendingPayments, setPendingPayments] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Payment modal state
@@ -22,7 +23,11 @@ const FeeDetails = () => {
       .then(res => {
         const kids = res.data.children || [];
         setChildren(kids);
-        if (kids.length > 0) setSelectedChild(kids[0]);
+        if (kids.length > 0) {
+          setSelectedChild(kids[0]);
+          fetchFees(kids[0].id);
+          fetchPendingPayments(kids[0].id);
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -32,9 +37,20 @@ const FeeDetails = () => {
     api.get(`/fees/student/${childId}`).then(res => setFees(res.data)).catch(() => {});
   };
 
-  useEffect(() => {
-    if (selectedChild) fetchFees(selectedChild.id);
-  }, [selectedChild]);
+  const fetchPendingPayments = (childId) => {
+    api.get(`/payments?studentId=${childId}&status=PENDING`)
+      .then(res => setPendingPayments(res.data))
+      .catch(() => setPendingPayments([]));
+  };
+
+  const handleChildChange = (childId) => {
+    const child = children.find(c => c.id === childId);
+    setSelectedChild(child);
+    setFees([]);
+    setPendingPayments([]);
+    fetchFees(childId);
+    fetchPendingPayments(childId);
+  };
 
   const openPayModal = (fee) => {
     const balance = fee.totalFees - fee.paidAmount;
@@ -55,9 +71,11 @@ const FeeDetails = () => {
         method: payForm.method,
         transactionId: payForm.transactionId || undefined,
       });
-      setPayMsg('Payment submitted! Admin has been notified to verify and update fee status.');
+      setPayMsg('Payment submitted! Admin will verify it shortly.');
       setPayError(false);
+      // Refresh both fees and pending payments
       fetchFees(selectedChild.id);
+      fetchPendingPayments(selectedChild.id);
       setTimeout(() => { setPayModal(null); setPayMsg(''); }, 3500);
     } catch (err) {
       setPayMsg(err.response?.data?.error || 'Payment failed. Please try again.');
@@ -76,6 +94,7 @@ const FeeDetails = () => {
 
   const totalDue = fees.reduce((s, f) => s + Math.max(0, (f.totalFees || 0) - (f.paidAmount || 0)), 0);
   const totalPaid = fees.reduce((s, f) => s + (f.paidAmount || 0), 0);
+  const pendingTotal = pendingPayments.reduce((s, p) => s + p.amount, 0);
 
   return (
     <div className="space-y-5">
@@ -86,10 +105,7 @@ const FeeDetails = () => {
         <div className="p-5 max-w-sm">
           <FormSelect
             value={selectedChild?.id || ''}
-            onChange={(e) => {
-              const child = children.find(c => c.id === e.target.value);
-              setSelectedChild(child); setFees([]);
-            }}
+            onChange={(e) => handleChildChange(e.target.value)}
           >
             {children.map((c) => (
               <option key={c.id} value={c.id}>{c.user?.name} (Roll: {c.rollNumber})</option>
@@ -112,10 +128,33 @@ const FeeDetails = () => {
             </div>
           </div>
 
+          {/* Pending Payments Section */}
+          {pendingPayments.length > 0 && (
+            <Card>
+              <CardHeader title="⏳ Pending Approval" />
+              <div className="divide-y border-t border-gray-100">
+                {pendingPayments.map(p => (
+                  <div key={p.id} className="p-4 flex justify-between items-center">
+                    <div>
+                      <p className="font-semibold text-sm text-amber-700">{p.fee?.feeType?.name || 'Fee Payment'}</p>
+                      <p className="text-xs text-gray-500">
+                        Amount: ₹{p.amount.toLocaleString()} • Method: {p.method} • {new Date(p.createdAt).toLocaleDateString('en-IN')}
+                      </p>
+                    </div>
+                    <StatusBadge status="PENDING" />
+                  </div>
+                ))}
+              </div>
+              <div className="mt-2 text-xs text-center text-amber-600 bg-amber-50 p-2 rounded-lg">
+                ℹ️ Your payment request is pending admin approval. Once approved, the fee status will be updated.
+              </div>
+            </Card>
+          )}
+
           <Card>
             <CardHeader title="Fee Records" />
 
-            {/* Desktop */}
+            {/* Desktop Table */}
             <div className="hidden sm:block overflow-x-auto">
               <table className="min-w-full">
                 <thead>
@@ -124,11 +163,13 @@ const FeeDetails = () => {
                       <th key={h} className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500"
                         style={{ borderBottom: '2px solid #eaf0fb' }}>{h}</th>
                     ))}
-                  </tr>
+                   </tr>
                 </thead>
                 <tbody className="divide-y" style={{ borderColor: '#f0f4fc' }}>
                   {fees.map(fee => {
                     const due = fee.totalFees - fee.paidAmount;
+                    const hasPending = pendingPayments.some(p => p.feeId === fee.id);
+                    const canPay = due > 0 && !hasPending;
                     return (
                       <tr key={fee.id} className="hover:bg-blue-50 transition-colors">
                         <td className="px-5 py-3.5 text-sm font-semibold">₹{fee.totalFees?.toLocaleString()}</td>
@@ -137,7 +178,9 @@ const FeeDetails = () => {
                         <td className="px-5 py-3.5 text-sm text-gray-600">{new Date(fee.dueDate).toLocaleDateString('en-IN')}</td>
                         <td className="px-5 py-3.5"><StatusBadge status={fee.status} /></td>
                         <td className="px-5 py-3.5">
-                          {due > 0 ? (
+                          {hasPending ? (
+                            <span className="text-xs text-amber-600 font-semibold bg-amber-50 px-2 py-1 rounded-full">⏳ Pending Approval</span>
+                          ) : due > 0 ? (
                             <button
                               onClick={() => openPayModal(fee)}
                               className="px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-all hover:opacity-90 active:scale-95"
@@ -156,11 +199,13 @@ const FeeDetails = () => {
               </table>
             </div>
 
-            {/* Mobile */}
+            {/* Mobile Cards */}
             <div className="sm:hidden divide-y" style={{ borderColor: '#f0f4fc' }}>
               {fees.map(fee => {
                 const due = fee.totalFees - fee.paidAmount;
                 const pctPaid = fee.totalFees ? ((fee.paidAmount / fee.totalFees) * 100) : 0;
+                const hasPending = pendingPayments.some(p => p.feeId === fee.id);
+                const canPay = due > 0 && !hasPending;
                 return (
                   <div key={fee.id} className="px-5 py-4">
                     <div className="flex items-center justify-between mb-3">
@@ -183,7 +228,11 @@ const FeeDetails = () => {
                     <div className="h-1.5 rounded-full overflow-hidden mb-3" style={{ background: '#f0f4fc' }}>
                       <div className="h-full rounded-full" style={{ width: `${pctPaid}%`, background: 'linear-gradient(90deg, #2d9e6b, #22c55e)' }} />
                     </div>
-                    {due > 0 && (
+                    {hasPending ? (
+                      <div className="text-center text-xs text-amber-600 bg-amber-50 p-2 rounded-xl font-semibold">
+                        ⏳ Payment pending approval
+                      </div>
+                    ) : due > 0 ? (
                       <button
                         onClick={() => openPayModal(fee)}
                         className="w-full py-2 rounded-xl text-sm font-bold text-white transition-all active:scale-95"
@@ -191,6 +240,8 @@ const FeeDetails = () => {
                       >
                         💳 Pay Now
                       </button>
+                    ) : (
+                      <div className="text-center text-xs text-green-600 font-semibold">✓ Fully Paid</div>
                     )}
                   </div>
                 );
@@ -217,7 +268,6 @@ const FeeDetails = () => {
             </div>
 
             <div className="space-y-4">
-              {/* Amount */}
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Amount (₹)</label>
                 <input
@@ -232,7 +282,6 @@ const FeeDetails = () => {
                 />
               </div>
 
-              {/* Payment Method */}
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Payment Method</label>
                 <div className="grid grid-cols-3 gap-2">
@@ -254,7 +303,6 @@ const FeeDetails = () => {
                 </div>
               </div>
 
-              {/* Transaction ID for ONLINE */}
               {payForm.method !== 'CASH' && (
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
@@ -271,7 +319,6 @@ const FeeDetails = () => {
                 </div>
               )}
 
-              {/* Info note */}
               <div className="px-3 py-2.5 rounded-xl text-xs" style={{ background: '#fffbea', border: '1px solid #fde68a', color: '#92400e' }}>
                 ℹ️ After payment, the admin will receive a notification and verify your payment before updating the fee status.
               </div>
