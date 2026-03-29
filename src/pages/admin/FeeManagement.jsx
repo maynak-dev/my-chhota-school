@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import {
   PageHeader, Card, CardHeader, FormGrid, FormInput, FormSelect,
-  PrimaryButton, Table, Td, StatusBadge,
+  PrimaryButton, Table, Td, StatusBadge, LoadingSpinner,
 } from '../../components/UI';
 
 const emptyForm = { studentId: '', totalFees: '', dueDate: '' };
@@ -10,27 +10,51 @@ const emptyForm = { studentId: '', totalFees: '', dueDate: '' };
 const FeeManagement = () => {
   const [fees, setFees] = useState([]);
   const [students, setStudents] = useState([]);
+  const [pendingPayments, setPendingPayments] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
   const [isError, setIsError] = useState(false);
+  const [fetchingPending, setFetchingPending] = useState(false);
 
   // Edit modal state
-  const [editModal, setEditModal] = useState(null); // { fee }
+  const [editModal, setEditModal] = useState(null);
   const [editForm, setEditForm] = useState({ totalFees: '', dueDate: '', status: '' });
   const [editLoading, setEditLoading] = useState(false);
   const [editMsg, setEditMsg] = useState('');
   const [editIsError, setEditIsError] = useState(false);
 
-  useEffect(() => { fetchData(); }, []);
+  // Action loading states for approve/reject
+  const [actionLoading, setActionLoading] = useState(null);
+
+  useEffect(() => {
+    fetchData();
+    fetchPendingPayments();
+  }, []);
 
   const fetchData = async () => {
     try {
-      const [feesRes, studentsRes] = await Promise.all([api.get('/fees'), api.get('/students')]);
+      const [feesRes, studentsRes] = await Promise.all([
+        api.get('/fees'),
+        api.get('/students')
+      ]);
       setFees(feesRes.data);
       setStudents(studentsRes.data);
     } catch (err) {
       console.error('Failed to load fee data', err);
+    }
+  };
+
+  const fetchPendingPayments = async () => {
+    setFetchingPending(true);
+    try {
+      const res = await api.get('/payments?status=PENDING');
+      setPendingPayments(res.data);
+    } catch (err) {
+      console.error('Failed to fetch pending payments', err);
+      setPendingPayments([]);
+    } finally {
+      setFetchingPending(false);
     }
   };
 
@@ -39,9 +63,13 @@ const FeeManagement = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.studentId || !form.totalFees || !form.dueDate) {
-      setMsg('Please fill in all fields.'); setIsError(true); return;
+      setMsg('Please fill in all fields.');
+      setIsError(true);
+      return;
     }
-    setLoading(true); setMsg(''); setIsError(false);
+    setLoading(true);
+    setMsg('');
+    setIsError(false);
     try {
       await api.post('/fees', {
         studentId: form.studentId,
@@ -55,7 +83,9 @@ const FeeManagement = () => {
     } catch (err) {
       setMsg(err.response?.data?.error || 'Failed to create fee record. Please try again.');
       setIsError(true);
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const openEdit = (fee) => {
@@ -64,15 +94,20 @@ const FeeManagement = () => {
       dueDate: fee.dueDate ? new Date(fee.dueDate).toISOString().split('T')[0] : '',
       status: fee.status || 'PENDING',
     });
-    setEditMsg(''); setEditIsError(false);
+    setEditMsg('');
+    setEditIsError(false);
     setEditModal({ fee });
   };
 
   const handleEditSubmit = async () => {
     if (!editForm.totalFees || !editForm.dueDate || !editForm.status) {
-      setEditMsg('Please fill in all fields.'); setEditIsError(true); return;
+      setEditMsg('Please fill in all fields.');
+      setEditIsError(true);
+      return;
     }
-    setEditLoading(true); setEditMsg(''); setEditIsError(false);
+    setEditLoading(true);
+    setEditMsg('');
+    setEditIsError(false);
     try {
       await api.put(`/fees/${editModal.fee.id}`, {
         totalFees: parseFloat(editForm.totalFees),
@@ -82,26 +117,62 @@ const FeeManagement = () => {
       setEditMsg('✅ Fee record updated!');
       setEditIsError(false);
       fetchData();
-      setTimeout(() => { setEditModal(null); setEditMsg(''); }, 1500);
+      setTimeout(() => {
+        setEditModal(null);
+        setEditMsg('');
+      }, 1500);
     } catch (err) {
       setEditMsg(err.response?.data?.error || 'Update failed. Please try again.');
       setEditIsError(true);
-    } finally { setEditLoading(false); }
+    } finally {
+      setEditLoading(false);
+    }
   };
 
-  const totalCollected = fees.filter(f => f.status === 'PAID').reduce((sum, f) => sum + (f.paidAmount || 0), 0);
-  const totalDue = fees.filter(f => f.status !== 'PAID').reduce((sum, f) => sum + ((f.totalFees || 0) - (f.paidAmount || 0)), 0);
+  const handleApprove = async (payment) => {
+    if (!window.confirm(`Approve payment of ₹${payment.amount} from ${payment.student?.user?.name}?`)) return;
+    setActionLoading(payment.id);
+    try {
+      await api.post(`/payments/${payment.id}/approve`);
+      // Refresh all data after approval
+      await Promise.all([fetchData(), fetchPendingPayments()]);
+    } catch (err) {
+      console.error('Approval failed:', err);
+      alert(err.response?.data?.error || 'Failed to approve payment');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleReject = async (payment) => {
+    if (!window.confirm(`Reject payment of ₹${payment.amount} from ${payment.student?.user?.name}?`)) return;
+    setActionLoading(payment.id);
+    try {
+      await api.post(`/payments/${payment.id}/reject`);
+      await fetchPendingPayments();
+    } catch (err) {
+      console.error('Rejection failed:', err);
+      alert(err.response?.data?.error || 'Failed to reject payment');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const totalCollected = fees.reduce((sum, f) => sum + (f.paidAmount || 0), 0);
+  const totalDue = fees.reduce((sum, f) => sum + ((f.totalFees || 0) - (f.paidAmount || 0)), 0);
+  const pendingAmountTotal = pendingPayments.reduce((sum, p) => sum + p.amount, 0);
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Fee Management" subtitle="Track and manage student fee records" />
+      <PageHeader title="Fee Management" subtitle="Track student fees and manage payment approvals" />
 
       {/* Summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         {[
           { label: 'Total Records', value: fees.length, icon: '📋', color: '#1b3f7a', bg: '#e8f0fe' },
           { label: 'Total Collected', value: `₹${totalCollected.toLocaleString()}`, icon: '✅', color: '#2d9e6b', bg: '#e6f6ef' },
-          { label: 'Total Pending', value: `₹${totalDue.toLocaleString()}`, icon: '⏳', color: '#e63946', bg: '#fff0f1' },
+          { label: 'Total Pending (Fees)', value: `₹${totalDue.toLocaleString()}`, icon: '⏳', color: '#e63946', bg: '#fff0f1' },
+          { label: 'Pending Approvals', value: pendingPayments.length, icon: '🕒', color: '#f4a261', bg: '#fff3e0' },
         ].map(s => (
           <div key={s.label} className="bg-white rounded-2xl p-4 flex items-center gap-4"
             style={{ boxShadow: '0 2px 12px rgba(27,63,122,0.07)' }}>
@@ -113,6 +184,86 @@ const FeeManagement = () => {
           </div>
         ))}
       </div>
+
+      {/* Pending Payment Approvals Section */}
+      <Card>
+        <CardHeader title="🕒 Pending Payment Approvals" />
+        {fetchingPending ? (
+          <div className="py-8"><LoadingSpinner /></div>
+        ) : pendingPayments.length === 0 ? (
+          <div className="py-8 text-center text-gray-400 text-sm">No pending payment requests.</div>
+        ) : (
+          <>
+            {/* Desktop Table */}
+            <div className="hidden sm:block overflow-x-auto">
+              <Table headers={['Student', 'Fee Type', 'Amount', 'Method', 'Transaction ID', 'Submitted On', 'Actions']}>
+                {pendingPayments.map(p => (
+                  <tr key={p.id} className="hover:bg-blue-50 transition-colors">
+                    <Td><span className="font-medium">{p.student?.user?.name}</span><br /><span className="text-xs text-gray-500">Roll: {p.student?.rollNumber}</span></Td>
+                    <Td>{p.fee?.feeType?.name || 'Fee Payment'}</Td>
+                    <Td className="font-semibold text-amber-700">₹{p.amount.toLocaleString()}</Td>
+                    <Td>
+                      <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{ background: '#f0f4fc' }}>
+                        {p.method === 'ONLINE' ? '🌐 ONLINE' : p.method === 'CASH' ? '💵 CASH' : '💳 CARD'}
+                      </span>
+                    </Td>
+                    <Td className="text-xs font-mono">{p.transactionId || '—'}</Td>
+                    <Td className="text-xs text-gray-500">{new Date(p.createdAt).toLocaleString('en-IN')}</Td>
+                    <Td>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleApprove(p)}
+                          disabled={actionLoading === p.id}
+                          className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-green-100 text-green-700 hover:bg-green-200 disabled:opacity-50"
+                        >
+                          {actionLoading === p.id ? '...' : '✅ Approve'}
+                        </button>
+                        <button
+                          onClick={() => handleReject(p)}
+                          disabled={actionLoading === p.id}
+                          className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-red-100 text-red-700 hover:bg-red-200 disabled:opacity-50"
+                        >
+                          ✖ Reject
+                        </button>
+                      </div>
+                    </Td>
+                  </tr>
+                ))}
+              </Table>
+            </div>
+
+            {/* Mobile Cards */}
+            <div className="sm:hidden divide-y" style={{ borderColor: '#f0f4fc' }}>
+              {pendingPayments.map(p => (
+                <div key={p.id} className="px-5 py-4 space-y-2">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-semibold text-sm">{p.student?.user?.name}</p>
+                      <p className="text-xs text-gray-500">{p.fee?.feeType?.name || 'Fee Payment'}</p>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{ background: '#f0f4fc' }}>
+                      {p.method}
+                    </span>
+                  </div>
+                  <p className="text-lg font-bold text-amber-700">₹{p.amount.toLocaleString()}</p>
+                  {p.transactionId && <p className="text-xs text-gray-500">Tx: {p.transactionId}</p>}
+                  <p className="text-xs text-gray-400">{new Date(p.createdAt).toLocaleString('en-IN')}</p>
+                  <div className="flex gap-2 pt-1">
+                    <button onClick={() => handleApprove(p)} disabled={actionLoading === p.id}
+                      className="flex-1 py-2 rounded-xl text-xs font-bold bg-green-100 text-green-700">
+                      ✅ Approve
+                    </button>
+                    <button onClick={() => handleReject(p)} disabled={actionLoading === p.id}
+                      className="flex-1 py-2 rounded-xl text-xs font-bold bg-red-100 text-red-700">
+                      ✖ Reject
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </Card>
 
       {/* Create Fee Record */}
       <Card>
