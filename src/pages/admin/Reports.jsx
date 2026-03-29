@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
-import { PageHeader, Card, GreenButton, PrimaryButton } from '../../components/UI';
+import { PageHeader, Card, GreenButton, PrimaryButton, LoadingSpinner } from '../../components/UI';
 
 const Reports = () => {
   const [reportType, setReportType] = useState('attendance');
@@ -17,25 +17,73 @@ const Reports = () => {
     setLoading(true);
     try {
       let res;
-      if (reportType === 'attendance') res = await api.get('/attendance/report');
-      else if (reportType === 'fee') res = await api.get('/fees/report');
-      else if (reportType === 'performance') res = await api.get('/results/report');
-      setData(res.data);
-    } catch {} finally { setLoading(false); }
+      if (reportType === 'attendance') {
+        // Replace with your actual attendance report endpoint
+        res = await api.get('/attendance/report');
+        setData(res.data);
+      } 
+      else if (reportType === 'fee') {
+        // ✅ Fee report: fetch all fees and transform into a readable report
+        const feesRes = await api.get('/fees');
+        const fees = feesRes.data;
+        
+        // Transform fee data into report rows
+        const reportData = fees.map(fee => ({
+          'Student Name': fee.student?.user?.name || 'N/A',
+          'Roll Number': fee.student?.rollNumber || 'N/A',
+          'Total Fees (₹)': fee.totalFees || 0,
+          'Paid Amount (₹)': fee.paidAmount || 0,
+          'Balance (₹)': (fee.totalFees || 0) - (fee.paidAmount || 0),
+          'Due Date': fee.dueDate ? new Date(fee.dueDate).toLocaleDateString('en-IN') : 'No due date',
+          'Status': fee.status || 'PENDING',
+        }));
+        setData(reportData);
+      } 
+      else if (reportType === 'performance') {
+        // Replace with your actual results report endpoint
+        res = await api.get('/results/report');
+        setData(res.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch report:', err);
+      setData([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { fetchReport(); }, [reportType]);
+  useEffect(() => {
+    fetchReport();
+  }, [reportType]);
 
   const exportCSV = () => {
-    if (!data) return;
-    let csv = '';
-    if (Array.isArray(data) && data.length > 0) {
-      csv = Object.keys(data[0]).join(',') + '\n' + data.map((r) => Object.values(r).join(',')).join('\n');
-    } else { csv = JSON.stringify(data); }
-    const blob = new Blob([csv], { type: 'text/csv' });
+    if (!data || (Array.isArray(data) && data.length === 0)) return;
+    
+    let csvRows = [];
+    if (Array.isArray(data)) {
+      const headers = Object.keys(data[0]);
+      csvRows.push(headers.join(','));
+      for (const row of data) {
+        const values = headers.map(header => {
+          const val = row[header];
+          // Escape commas and quotes
+          return typeof val === 'string' && (val.includes(',') || val.includes('"')) 
+            ? `"${val.replace(/"/g, '""')}"` 
+            : val;
+        });
+        csvRows.push(values.join(','));
+      }
+    } else {
+      // Fallback for non-array data
+      csvRows.push(JSON.stringify(data));
+    }
+    
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = `${reportType}_report.csv`; a.click();
+    a.href = url;
+    a.download = `${reportType}_report_${new Date().toISOString().slice(0,19)}.csv`;
+    a.click();
     URL.revokeObjectURL(url);
   };
 
@@ -90,43 +138,41 @@ const Reports = () => {
 
         <div className="p-5">
           {loading ? (
-            <div className="flex items-center justify-center py-16 gap-3">
-              <svg className="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24" style={{ color: '#1b3f7a' }}>
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-              <span className="text-gray-500 text-sm">Generating report...</span>
+            <div className="flex justify-center py-16">
+              <LoadingSpinner />
             </div>
-          ) : data ? (
+          ) : data && Array.isArray(data) && data.length > 0 ? (
             <div className="overflow-x-auto">
-              {Array.isArray(data) && data.length > 0 ? (
-                <table className="min-w-full">
-                  <thead>
-                    <tr style={{ background: '#f8faff' }}>
-                      {Object.keys(data[0]).map((key) => (
-                        <th key={key} className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500"
-                          style={{ borderBottom: '2px solid #eaf0fb' }}>
-                          {key}
-                        </th>
+              <table className="min-w-full">
+                <thead>
+                  <tr style={{ background: '#f8faff' }}>
+                    {Object.keys(data[0]).map((key) => (
+                      <th key={key} className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-500"
+                        style={{ borderBottom: '2px solid #eaf0fb' }}>
+                        {key}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y" style={{ borderColor: '#f0f4fc' }}>
+                  {data.map((row, idx) => (
+                    <tr key={idx} className="hover:bg-blue-50 transition-colors">
+                      {Object.values(row).map((val, i) => (
+                        <td key={i} className="px-5 py-3.5 text-sm text-gray-700">
+                          {typeof val === 'number' && key.includes('₹') 
+                            ? `₹${val.toLocaleString()}` 
+                            : val}
+                        </td>
                       ))}
                     </tr>
-                  </thead>
-                  <tbody className="divide-y" style={{ borderColor: '#f0f4fc' }}>
-                    {data.map((row, idx) => (
-                      <tr key={idx} className="hover:bg-blue-50 transition-colors">
-                        {Object.values(row).map((val, i) => (
-                          <td key={i} className="px-5 py-3.5 text-sm text-gray-700">{String(val)}</td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <pre className="text-xs text-gray-500 overflow-auto bg-gray-50 p-4 rounded-xl">
-                  {JSON.stringify(data, null, 2)}
-                </pre>
-              )}
+                  ))}
+                </tbody>
+              </table>
             </div>
+          ) : data && !Array.isArray(data) ? (
+            <pre className="text-xs text-gray-500 overflow-auto bg-gray-50 p-4 rounded-xl">
+              {JSON.stringify(data, null, 2)}
+            </pre>
           ) : (
             <div className="py-12 text-center text-gray-400 text-sm">No report data available.</div>
           )}
