@@ -130,10 +130,10 @@ const FeeManagement = () => {
   };
 
   const handleApprove = async (payment) => {
-    if (!window.confirm(`Approve payment of ₹${payment.amount} from ${payment.student?.user?.name}?`)) return;
+    if (!window.confirm(`Approve payment of ₹${payment.amount} from ${payment.fee?.student?.user?.name || 'student'}?`)) return;
     setActionLoading(payment.id);
     try {
-      await api.post(`/payments/${payment.id}/approve`);
+      await api.put(`/payments/${payment.id}`, { status: 'APPROVED' });
       // Refresh all data after approval
       await Promise.all([fetchData(), fetchPendingPayments()]);
     } catch (err) {
@@ -145,10 +145,10 @@ const FeeManagement = () => {
   };
 
   const handleReject = async (payment) => {
-    if (!window.confirm(`Reject payment of ₹${payment.amount} from ${payment.student?.user?.name}?`)) return;
+    if (!window.confirm(`Reject payment of ₹${payment.amount} from ${payment.fee?.student?.user?.name || 'student'}?`)) return;
     setActionLoading(payment.id);
     try {
-      await api.post(`/payments/${payment.id}/reject`);
+      await api.put(`/payments/${payment.id}`, { status: 'REJECTED' });
       await fetchPendingPayments();
     } catch (err) {
       console.error('Rejection failed:', err);
@@ -197,69 +197,81 @@ const FeeManagement = () => {
             {/* Desktop Table */}
             <div className="hidden sm:block overflow-x-auto">
               <Table headers={['Student', 'Fee Type', 'Amount', 'Method', 'Transaction ID', 'Submitted On', 'Actions']}>
-                {pendingPayments.map(p => (
-                  <tr key={p.id} className="hover:bg-blue-50 transition-colors">
-                    <Td><span className="font-medium">{p.student?.user?.name}</span><br /><span className="text-xs text-gray-500">Roll: {p.student?.rollNumber}</span></Td>
-                    <Td>{p.fee?.feeType?.name || 'Fee Payment'}</Td>
-                    <Td className="font-semibold text-amber-700">₹{p.amount.toLocaleString()}</Td>
-                    <Td>
-                      <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{ background: '#f0f4fc' }}>
-                        {p.method === 'ONLINE' ? '🌐 ONLINE' : p.method === 'CASH' ? '💵 CASH' : '💳 CARD'}
-                      </span>
-                    </Td>
-                    <Td className="text-xs font-mono">{p.transactionId || '—'}</Td>
-                    <Td className="text-xs text-gray-500">{new Date(p.createdAt).toLocaleString('en-IN')}</Td>
-                    <Td>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleApprove(p)}
-                          disabled={actionLoading === p.id}
-                          className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-green-100 text-green-700 hover:bg-green-200 disabled:opacity-50"
-                        >
-                          {actionLoading === p.id ? '...' : '✅ Approve'}
-                        </button>
-                        <button
-                          onClick={() => handleReject(p)}
-                          disabled={actionLoading === p.id}
-                          className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-red-100 text-red-700 hover:bg-red-200 disabled:opacity-50"
-                        >
-                          ✖ Reject
-                        </button>
-                      </div>
-                    </Td>
-                  </tr>
-                ))}
+                {pendingPayments.map(p => {
+                  const studentName = p.fee?.student?.user?.name || 'Unknown';
+                  const rollNumber = p.fee?.student?.rollNumber || '';
+                  const feeTypeName = p.fee?.feeType?.name || 'Fee Payment';
+                  return (
+                    <tr key={p.id} className="hover:bg-blue-50 transition-colors">
+                      <Td>
+                        <span className="font-medium">{studentName}</span>
+                        {rollNumber && <br /><span className="text-xs text-gray-500">Roll: {rollNumber}</span>}
+                      </Td>
+                      <Td>{feeTypeName}</Td>
+                      <Td className="font-semibold text-amber-700">₹{p.amount.toLocaleString()}</Td>
+                      <Td>
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{ background: '#f0f4fc' }}>
+                          {p.method === 'ONLINE' ? '🌐 ONLINE' : p.method === 'CASH' ? '💵 CASH' : '💳 CARD'}
+                        </span>
+                      </Td>
+                      <Td className="text-xs font-mono">{p.transactionId || '—'}</Td>
+                      <Td className="text-xs text-gray-500">{new Date(p.createdAt).toLocaleString('en-IN')}</Td>
+                      <Td>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleApprove(p)}
+                            disabled={actionLoading === p.id}
+                            className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-green-100 text-green-700 hover:bg-green-200 disabled:opacity-50"
+                          >
+                            {actionLoading === p.id ? '...' : '✅ Approve'}
+                          </button>
+                          <button
+                            onClick={() => handleReject(p)}
+                            disabled={actionLoading === p.id}
+                            className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-red-100 text-red-700 hover:bg-red-200 disabled:opacity-50"
+                          >
+                            ✖ Reject
+                          </button>
+                        </div>
+                      </Td>
+                    </tr>
+                  );
+                })}
               </Table>
             </div>
 
             {/* Mobile Cards */}
             <div className="sm:hidden divide-y" style={{ borderColor: '#f0f4fc' }}>
-              {pendingPayments.map(p => (
-                <div key={p.id} className="px-5 py-4 space-y-2">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="font-semibold text-sm">{p.student?.user?.name}</p>
-                      <p className="text-xs text-gray-500">{p.fee?.feeType?.name || 'Fee Payment'}</p>
+              {pendingPayments.map(p => {
+                const studentName = p.fee?.student?.user?.name || 'Unknown';
+                const feeTypeName = p.fee?.feeType?.name || 'Fee Payment';
+                return (
+                  <div key={p.id} className="px-5 py-4 space-y-2">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-semibold text-sm">{studentName}</p>
+                        <p className="text-xs text-gray-500">{feeTypeName}</p>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{ background: '#f0f4fc' }}>
+                        {p.method}
+                      </span>
                     </div>
-                    <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{ background: '#f0f4fc' }}>
-                      {p.method}
-                    </span>
+                    <p className="text-lg font-bold text-amber-700">₹{p.amount.toLocaleString()}</p>
+                    {p.transactionId && <p className="text-xs text-gray-500">Tx: {p.transactionId}</p>}
+                    <p className="text-xs text-gray-400">{new Date(p.createdAt).toLocaleString('en-IN')}</p>
+                    <div className="flex gap-2 pt-1">
+                      <button onClick={() => handleApprove(p)} disabled={actionLoading === p.id}
+                        className="flex-1 py-2 rounded-xl text-xs font-bold bg-green-100 text-green-700">
+                        ✅ Approve
+                      </button>
+                      <button onClick={() => handleReject(p)} disabled={actionLoading === p.id}
+                        className="flex-1 py-2 rounded-xl text-xs font-bold bg-red-100 text-red-700">
+                        ✖ Reject
+                      </button>
+                    </div>
                   </div>
-                  <p className="text-lg font-bold text-amber-700">₹{p.amount.toLocaleString()}</p>
-                  {p.transactionId && <p className="text-xs text-gray-500">Tx: {p.transactionId}</p>}
-                  <p className="text-xs text-gray-400">{new Date(p.createdAt).toLocaleString('en-IN')}</p>
-                  <div className="flex gap-2 pt-1">
-                    <button onClick={() => handleApprove(p)} disabled={actionLoading === p.id}
-                      className="flex-1 py-2 rounded-xl text-xs font-bold bg-green-100 text-green-700">
-                      ✅ Approve
-                    </button>
-                    <button onClick={() => handleReject(p)} disabled={actionLoading === p.id}
-                      className="flex-1 py-2 rounded-xl text-xs font-bold bg-red-100 text-red-700">
-                      ✖ Reject
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </>
         )}
@@ -317,7 +329,7 @@ const FeeManagement = () => {
                     ✏️ Edit
                   </button>
                 </Td>
-              </tr>
+              </table>
             ))}
           </Table>
         </div>
