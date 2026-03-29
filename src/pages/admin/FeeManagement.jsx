@@ -32,6 +32,7 @@ const FeeManagement = () => {
 
   const fetchData = async () => {
     try {
+      // Fetch fees and students separately
       const [feesRes, studentsRes] = await Promise.all([
         api.get('/fees'),
         api.get('/students')
@@ -54,6 +55,14 @@ const FeeManagement = () => {
     } finally {
       setFetchingPending(false);
     }
+  };
+
+  // Helper to get student name from fee object (since backend may not include full student relation)
+  const getStudentName = (fee) => {
+    if (fee.student?.user?.name) return fee.student.user.name;
+    // Fallback: find student from the separate students list
+    const found = students.find(s => s.id === fee.studentId);
+    return found?.user?.name || 'N/A';
   };
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
@@ -128,7 +137,8 @@ const FeeManagement = () => {
   };
 
   const handleApprove = async (payment) => {
-    if (!window.confirm(`Approve payment of ₹${payment.amount} from ${payment.fee?.student?.user?.name || 'student'}?`)) return;
+    const studentName = payment.fee?.student?.user?.name || 'student';
+    if (!window.confirm(`Approve payment of ₹${payment.amount} from ${studentName}?`)) return;
     setActionLoading(payment.id);
     try {
       await api.put(`/payments/${payment.id}`, { status: 'APPROVED' });
@@ -142,7 +152,8 @@ const FeeManagement = () => {
   };
 
   const handleReject = async (payment) => {
-    if (!window.confirm(`Reject payment of ₹${payment.amount} from ${payment.fee?.student?.user?.name || 'student'}?`)) return;
+    const studentName = payment.fee?.student?.user?.name || 'student';
+    if (!window.confirm(`Reject payment of ₹${payment.amount} from ${studentName}?`)) return;
     setActionLoading(payment.id);
     try {
       await api.put(`/payments/${payment.id}`, { status: 'REJECTED' });
@@ -155,8 +166,16 @@ const FeeManagement = () => {
     }
   };
 
-  const totalCollected = fees.reduce((sum, f) => sum + (f.paidAmount || 0), 0);
-  const totalDue = fees.reduce((sum, f) => sum + ((f.totalFees || 0) - (f.paidAmount || 0)), 0);
+  // Safely compute totals (coerce to numbers)
+  const totalCollected = fees.reduce((sum, f) => sum + (Number(f.paidAmount) || 0), 0);
+  const totalDue = fees.reduce((sum, f) => sum + ((Number(f.totalFees) || 0) - (Number(f.paidAmount) || 0)), 0);
+
+  // Format date safely
+  const formatDate = (dateStr) => {
+    if (!dateStr) return 'No due date';
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? 'Invalid date' : d.toLocaleDateString('en-IN');
+  };
 
   return (
     <div className="space-y-5">
@@ -202,7 +221,7 @@ const FeeManagement = () => {
                         {rollNumber && <><br /><span className="text-xs text-gray-500">Roll: {rollNumber}</span></>}
                       </Td>
                       <Td>{feeTypeName}</Td>
-                      <Td className="font-semibold text-amber-700">₹{p.amount.toLocaleString()}</Td>
+                      <Td className="font-semibold text-amber-700">₹{Number(p.amount).toLocaleString()}</Td>
                       <Td>
                         <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{ background: '#f0f4fc' }}>
                           {p.method === 'ONLINE' ? '🌐 ONLINE' : p.method === 'CASH' ? '💵 CASH' : '💳 CARD'}
@@ -249,7 +268,7 @@ const FeeManagement = () => {
                         {p.method}
                       </span>
                     </div>
-                    <p className="text-lg font-bold text-amber-700">₹{p.amount.toLocaleString()}</p>
+                    <p className="text-lg font-bold text-amber-700">₹{Number(p.amount).toLocaleString()}</p>
                     {p.transactionId && <p className="text-xs text-gray-500">Tx: {p.transactionId}</p>}
                     <p className="text-xs text-gray-400">{new Date(p.createdAt).toLocaleString('en-IN')}</p>
                     <div className="flex gap-2 pt-1">
@@ -307,11 +326,11 @@ const FeeManagement = () => {
           <Table headers={['Student', 'Total Fees', 'Paid', 'Balance', 'Due Date', 'Status', 'Actions']}>
             {fees.map(f => (
               <tr key={f.id} className="hover:bg-blue-50 transition-colors">
-                <Td><span className="font-medium">{f.student?.user?.name}</span></Td>
-                <Td className="font-semibold">₹{f.totalFees?.toLocaleString()}</Td>
-                <Td className="text-green-600 font-semibold">₹{f.paidAmount?.toLocaleString()}</Td>
-                <Td className="text-red-500 font-semibold">₹{((f.totalFees || 0) - (f.paidAmount || 0)).toLocaleString()}</Td>
-                <Td>{new Date(f.dueDate).toLocaleDateString('en-IN')}</Td>
+                <Td><span className="font-medium">{getStudentName(f)}</span></Td>
+                <Td className="font-semibold">₹{Number(f.totalFees).toLocaleString()}</Td>
+                <Td className="text-green-600 font-semibold">₹{Number(f.paidAmount).toLocaleString()}</Td>
+                <Td className="text-red-500 font-semibold">₹{(Number(f.totalFees) - Number(f.paidAmount)).toLocaleString()}</Td>
+                <Td>{formatDate(f.dueDate)}</Td>
                 <Td><StatusBadge status={f.status} /></Td>
                 <Td>
                   <button onClick={() => openEdit(f)}
@@ -329,12 +348,12 @@ const FeeManagement = () => {
             <div key={f.id} className="px-5 py-4">
               <div className="flex items-start justify-between mb-2">
                 <div>
-                  <p className="font-semibold text-sm">{f.student?.user?.name}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Due: {new Date(f.dueDate).toLocaleDateString('en-IN')}</p>
+                  <p className="font-semibold text-sm">{getStudentName(f)}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Due: {formatDate(f.dueDate)}</p>
                   <p className="text-xs mt-1">
-                    <span className="text-green-600 font-semibold">Paid ₹{f.paidAmount?.toLocaleString()}</span>
+                    <span className="text-green-600 font-semibold">Paid ₹{Number(f.paidAmount).toLocaleString()}</span>
                     <span className="text-gray-400"> / </span>
-                    <span className="font-semibold">₹{f.totalFees?.toLocaleString()}</span>
+                    <span className="font-semibold">₹{Number(f.totalFees).toLocaleString()}</span>
                   </p>
                 </div>
                 <StatusBadge status={f.status} />
@@ -350,6 +369,7 @@ const FeeManagement = () => {
         {fees.length === 0 && <div className="py-12 text-center text-gray-400 text-sm">No fee records found.</div>}
       </Card>
 
+      {/* Edit Modal */}
       {editModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)' }}>
@@ -357,7 +377,7 @@ const FeeManagement = () => {
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="text-lg font-bold" style={{ color: '#1b3f7a', fontFamily: 'Baloo 2, cursive' }}>Edit Fee Record</h3>
-                <p className="text-xs text-gray-400 mt-0.5">{editModal.fee.student?.user?.name}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{getStudentName(editModal.fee)}</p>
               </div>
               <button onClick={() => setEditModal(null)}
                 className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 transition-all text-lg font-bold">✕</button>
