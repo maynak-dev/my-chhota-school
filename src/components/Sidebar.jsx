@@ -113,6 +113,7 @@ const Sidebar = ({ role, mobileOpen, onClose }) => {
     { to: '/admin/fees', label: 'Fee Management' },
     { to: '/admin/reports', label: 'Reports' },
     { to: '/admin/notifications', label: 'Notifications' },
+    { to: '/admin/timetable', label: 'Timetable' },
   ];
 
 
@@ -124,6 +125,7 @@ const Sidebar = ({ role, mobileOpen, onClose }) => {
     { to: '/teacher/timetable', label: 'Timetable' },
     { to: '/teacher/lesson-planner', label: 'Lesson Planner' },
     { to: '/teacher/students', label: 'Student List' },
+    { to: '/teacher/results', label: 'Results' },
   ];
   const studentLinks = [
     { to: '/student/videos', label: 'Videos' },

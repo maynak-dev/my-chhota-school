@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 
+
 // Admin Pages
 import Notifications from './pages/admin/Notifications';
 import Users from './pages/admin/Users';
@@ -13,7 +14,7 @@ import Batches from './pages/admin/Batches';
 import Courses from './pages/admin/Courses';
 import FeeManagement from './pages/admin/FeeManagement';
 import Reports from './pages/admin/Reports';
-
+import AdminTimetable from './pages/admin/AdminTimetable';
 // Teacher Pages
 import Attendance from './pages/teacher/Attendance';
 import Notes from './pages/teacher/Notes';
@@ -22,7 +23,7 @@ import Assignments from './pages/teacher/Assignments';
 import Timetable from './pages/teacher/Timetable';
 import LessonPlanner from './pages/teacher/LessonPlanner';
 import StudentList from './pages/teacher/StudentList';
-
+import TeacherResults from './pages/teacher/Results';
 // Student Pages
 import StudentVideos from './pages/student/Videos';
 import StudentNotes from './pages/student/Notes';
@@ -55,7 +56,8 @@ function App() {
               <Route path="/admin/fees" element={<FeeManagement />} />
               <Route path="/admin/reports" element={<Reports />} />
               <Route path="/admin/notifications" element={<Notifications />} />
-              
+              <Route path="/admin/timetable" element={<AdminTimetable />} />
+
               {/* Teacher Routes */}
               <Route path="/teacher/attendance" element={<Attendance />} />
               <Route path="/teacher/notes" element={<Notes />} />
@@ -64,6 +66,7 @@ function App() {
               <Route path="/teacher/timetable" element={<Timetable />} />
               <Route path="/teacher/lesson-planner" element={<LessonPlanner />} />
               <Route path="/teacher/students" element={<StudentList />} />
+              <Route path="/teacher/results" element={<TeacherResults />} />
               
               {/* Student Routes */}
               <Route path="/student/videos" element={<StudentVideos />} />
