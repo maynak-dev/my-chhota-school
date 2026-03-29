@@ -17,14 +17,12 @@ const FeeManagement = () => {
   const [isError, setIsError] = useState(false);
   const [fetchingPending, setFetchingPending] = useState(false);
 
-  // Edit modal state
   const [editModal, setEditModal] = useState(null);
   const [editForm, setEditForm] = useState({ totalFees: '', dueDate: '', status: '' });
   const [editLoading, setEditLoading] = useState(false);
   const [editMsg, setEditMsg] = useState('');
   const [editIsError, setEditIsError] = useState(false);
 
-  // Action loading states for approve/reject
   const [actionLoading, setActionLoading] = useState(null);
 
   useEffect(() => {
@@ -134,7 +132,6 @@ const FeeManagement = () => {
     setActionLoading(payment.id);
     try {
       await api.put(`/payments/${payment.id}`, { status: 'APPROVED' });
-      // Refresh all data after approval
       await Promise.all([fetchData(), fetchPendingPayments()]);
     } catch (err) {
       console.error('Approval failed:', err);
@@ -160,13 +157,11 @@ const FeeManagement = () => {
 
   const totalCollected = fees.reduce((sum, f) => sum + (f.paidAmount || 0), 0);
   const totalDue = fees.reduce((sum, f) => sum + ((f.totalFees || 0) - (f.paidAmount || 0)), 0);
-  const pendingAmountTotal = pendingPayments.reduce((sum, p) => sum + p.amount, 0);
 
   return (
     <div className="space-y-5">
       <PageHeader title="Fee Management" subtitle="Track student fees and manage payment approvals" />
 
-      {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         {[
           { label: 'Total Records', value: fees.length, icon: '📋', color: '#1b3f7a', bg: '#e8f0fe' },
@@ -194,7 +189,6 @@ const FeeManagement = () => {
           <div className="py-8 text-center text-gray-400 text-sm">No pending payment requests.</div>
         ) : (
           <>
-            {/* Desktop Table */}
             <div className="hidden sm:block overflow-x-auto">
               <Table headers={['Student', 'Fee Type', 'Amount', 'Method', 'Transaction ID', 'Submitted On', 'Actions']}>
                 {pendingPayments.map(p => {
@@ -205,7 +199,7 @@ const FeeManagement = () => {
                     <tr key={p.id} className="hover:bg-blue-50 transition-colors">
                       <Td>
                         <span className="font-medium">{studentName}</span>
-                        {rollNumber && <br /><span className="text-xs text-gray-500">Roll: {rollNumber}</span>}
+                        {rollNumber && <><br /><span className="text-xs text-gray-500">Roll: {rollNumber}</span></>}
                       </Td>
                       <Td>{feeTypeName}</Td>
                       <Td className="font-semibold text-amber-700">₹{p.amount.toLocaleString()}</Td>
@@ -240,7 +234,6 @@ const FeeManagement = () => {
               </Table>
             </div>
 
-            {/* Mobile Cards */}
             <div className="sm:hidden divide-y" style={{ borderColor: '#f0f4fc' }}>
               {pendingPayments.map(p => {
                 const studentName = p.fee?.student?.user?.name || 'Unknown';
@@ -310,8 +303,6 @@ const FeeManagement = () => {
       {/* Fee Records Table */}
       <Card>
         <CardHeader title={`Fee Records (${fees.length})`} />
-
-        {/* Desktop */}
         <div className="hidden sm:block overflow-x-auto">
           <Table headers={['Student', 'Total Fees', 'Paid', 'Balance', 'Due Date', 'Status', 'Actions']}>
             {fees.map(f => (
@@ -329,12 +320,10 @@ const FeeManagement = () => {
                     ✏️ Edit
                   </button>
                 </Td>
-              </table>
+              </tr>
             ))}
           </Table>
         </div>
-
-        {/* Mobile */}
         <div className="sm:hidden divide-y" style={{ borderColor: '#f0f4fc' }}>
           {fees.map(f => (
             <div key={f.id} className="px-5 py-4">
@@ -358,11 +347,9 @@ const FeeManagement = () => {
             </div>
           ))}
         </div>
-
         {fees.length === 0 && <div className="py-12 text-center text-gray-400 text-sm">No fee records found.</div>}
       </Card>
 
-      {/* Edit Modal */}
       {editModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)' }}>
@@ -375,7 +362,6 @@ const FeeManagement = () => {
               <button onClick={() => setEditModal(null)}
                 className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 transition-all text-lg font-bold">✕</button>
             </div>
-
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Total Fees (₹)</label>
@@ -384,7 +370,6 @@ const FeeManagement = () => {
                   className="w-full px-4 py-2.5 rounded-xl text-sm font-semibold outline-none"
                   style={{ border: '1.5px solid #e8f0fe', background: '#f8faff' }} />
               </div>
-
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Due Date</label>
                 <input type="date" value={editForm.dueDate}
@@ -392,7 +377,6 @@ const FeeManagement = () => {
                   className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
                   style={{ border: '1.5px solid #e8f0fe', background: '#f8faff' }} />
               </div>
-
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Fee Status</label>
                 <div className="grid grid-cols-3 gap-2">
@@ -412,14 +396,12 @@ const FeeManagement = () => {
                   ))}
                 </div>
               </div>
-
               {editMsg && (
                 <div className="px-3 py-2.5 rounded-xl text-xs font-medium"
                   style={{ background: editIsError ? '#fff0f1' : '#e6f6ef', color: editIsError ? '#e63946' : '#2d9e6b', border: `1px solid ${editIsError ? '#fbc8cb' : '#b7e9d0'}` }}>
                   {editMsg}
                 </div>
               )}
-
               <button onClick={handleEditSubmit} disabled={editLoading}
                 className="w-full py-3 rounded-xl font-bold text-white text-sm transition-all active:scale-95 disabled:opacity-60"
                 style={{ background: 'linear-gradient(135deg, #1b3f7a, #2d9e6b)' }}>
