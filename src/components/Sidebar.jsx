@@ -114,6 +114,11 @@ const Sidebar = ({ role, mobileOpen, onClose }) => {
     { to: '/admin/reports', label: 'Reports' },
     { to: '/admin/notifications', label: 'Notifications' },
     { to: '/admin/timetable', label: 'Timetable' },
+    { to: '/admin/exams', label: 'Exams' },
+    { to: '/admin/expenses', label: 'Expenses' },
+    { to: '/admin/payroll', label: 'Payroll' },
+    { to: '/admin/leaves', label: 'Leave Requests' },
+
   ];
 
 
@@ -126,6 +131,9 @@ const Sidebar = ({ role, mobileOpen, onClose }) => {
     { to: '/teacher/lesson-planner', label: 'Lesson Planner' },
     { to: '/teacher/students', label: 'Student List' },
     { to: '/teacher/results', label: 'Results' },
+    { to: '/teacher/diary', label: 'Student Diary' },
+    { to: '/teacher/leaves', label: 'My Leaves' },
+
   ];
   const studentLinks = [
     { to: '/student/videos', label: 'Videos' },
@@ -134,11 +142,15 @@ const Sidebar = ({ role, mobileOpen, onClose }) => {
     { to: '/student/attendance', label: 'Attendance' },
     { to: '/student/fees', label: 'Fees' },
     { to: '/student/results', label: 'Results' },
+    { to: '/student/profile', label: 'My Profile' },
+    { to: '/student/notifications', label: 'Notifications' },
+    { to: '/student/diary', label: 'My Diary' },
   ];
   const parentLinks = [
     { to: '/parent/child-progress', label: 'Child Progress' },
     { to: '/parent/fees', label: 'Fee Details' },
     { to: '/parent/timetable', label: 'Timetable' },
+    { to: '/parent/notifications', label: 'Notifications' },
   ];
 
   const roleLabels = {
