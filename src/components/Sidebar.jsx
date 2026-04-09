@@ -157,6 +157,16 @@ const Sidebar = ({ role, mobileOpen, onClose }) => {
     { to: '/admin/expenses', label: 'Expenses' },
     { to: '/admin/payroll', label: 'Payroll' },
     { to: '/admin/leaves', label: 'Leave Requests' },
+    { to: '/admin/live-classes', label: 'Live Classes' },
+    { to: '/admin/online-exams', label: 'Online Exams' },
+    { to: '/admin/question-bank', label: 'Question Bank' },
+    { to: '/admin/gamification', label: 'Gamification' },
+    { to: '/admin/discussions', label: 'Discussions' },
+    { to: '/admin/analytics', label: 'Analytics' },
+    { to: '/admin/activity-logs', label: 'Activity Logs' },
+    { to: '/admin/subscriptions', label: 'Subscriptions' },
+    { to: '/admin/notification-rules', label: 'Notification Rules' },
+    { to: '/admin/permissions', label: 'Permissions' },
   ];
 
   const teacherLinks = [
@@ -182,6 +192,7 @@ const Sidebar = ({ role, mobileOpen, onClose }) => {
     { to: '/student/profile', label: 'My Profile' },
     { to: '/student/notifications', label: 'Notifications' },
     { to: '/student/diary', label: 'My Diary' },
+    { to: '/student/leaderboard', label: 'Leaderboard' },
   ];
 
   const parentLinks = [
@@ -189,6 +200,7 @@ const Sidebar = ({ role, mobileOpen, onClose }) => {
     { to: '/parent/fees', label: 'Fee Details' },
     { to: '/parent/timetable', label: 'Timetable' },
     { to: '/parent/notifications', label: 'Notifications' },
+    { to: '/parent/weekly-summary', label: 'Weekly Summary' },
   ];
 
   const roleLabels = {

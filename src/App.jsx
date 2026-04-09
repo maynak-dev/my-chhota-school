@@ -19,6 +19,17 @@ import AdminExams from './pages/admin/Exams';
 import Expenses from './pages/admin/Expenses';
 import Payroll from './pages/admin/Payroll';
 import AdminLeaves from './pages/admin/Leaves';
+import LiveClasses from './pages/admin/LiveClasses';
+import OnlineExams from './pages/admin/OnlineExams';
+import QuestionBank from './pages/admin/QuestionBank';
+import Gamification from './pages/admin/Gamification';
+import Discussions from './pages/admin/Discussions';
+import Analytics from './pages/admin/Analytics';
+import ActivityLogs from './pages/admin/ActivityLogs';
+import CourseModules from './pages/admin/CourseModules';
+import Subscriptions from './pages/admin/Subscriptions';
+import NotificationRules from './pages/admin/NotificationRules';
+import Permissions from './pages/admin/Permissions';
 
 // Teacher Pages
 import Attendance from './pages/teacher/Attendance';
@@ -41,12 +52,15 @@ import StudentResults from './pages/student/Results';
 import StudentProfile from './pages/student/Profile';
 import StudentNotifications from './pages/student/Notifications';
 import StudentDiary from './pages/student/Diary';
+import Leaderboard from './pages/student/Leaderboard';
+import TakeExam from './pages/student/TakeExam';
 
 // Parent Pages
 import ChildProgress from './pages/parent/ChildProgress';
 import ParentFeeDetails from './pages/parent/FeeDetails';
 import ParentTimetable from './pages/parent/Timetable';
 import ParentNotifications from './pages/parent/Notifications';
+import WeeklySummary from './pages/parent/WeeklySummary';
 
 function App() {
   return (
@@ -72,6 +86,17 @@ function App() {
               <Route path="/admin/expenses" element={<Expenses />} />
               <Route path="/admin/payroll" element={<Payroll />} />
               <Route path="/admin/leaves" element={<AdminLeaves />} />
+              <Route path="/admin/live-classes" element={<LiveClasses />} />
+              <Route path="/admin/question-bank" element={<QuestionBank />} />
+              <Route path="/admin/online-exams" element={<OnlineExams />} />
+              <Route path="/admin/gamification" element={<Gamification />} />
+              <Route path="/admin/discussions" element={<Discussions />} />
+              <Route path="/admin/analytics" element={<Analytics />} />
+              <Route path="/admin/activity-logs" element={<ActivityLogs />} />
+              <Route path="/admin/courses/:courseId/modules" element={<CourseModules />} />
+              <Route path="/admin/subscriptions" element={<Subscriptions />} />
+              <Route path="/admin/notification-rules" element={<NotificationRules />} />
+              <Route path="/admin/permissions" element={<Permissions />} />
 
               {/* Teacher Routes */}
               <Route path="/teacher/attendance" element={<Attendance />} />
@@ -95,12 +120,15 @@ function App() {
               <Route path="/student/profile" element={<StudentProfile />} />
               <Route path="/student/notifications" element={<StudentNotifications />} />
               <Route path="/student/diary" element={<StudentDiary />} />
+              <Route path="/student/leaderboard" element={<Leaderboard />} />
+              <Route path="/student/exam/:examId" element={<TakeExam />} />
 
               {/* Parent Routes */}
               <Route path="/parent/child-progress" element={<ChildProgress />} />
               <Route path="/parent/fees" element={<ParentFeeDetails />} />
               <Route path="/parent/timetable" element={<ParentTimetable />} />
               <Route path="/parent/notifications" element={<ParentNotifications />} />
+              <Route path="/parent/weekly-summary" element={<WeeklySummary />} />
 
             </Route>
           </Route>
